@@ -1,6 +1,6 @@
 "use client";
 
-import { ConfigProvider, theme } from "antd";
+import { App, ConfigProvider, theme } from "antd";
 import type { PropsWithChildren } from "react";
 import { SessionProvider } from "next-auth/react";
 
@@ -13,9 +13,8 @@ export default function Providers({ children }: PropsWithChildren) {
           token: { borderRadius: 10 },
         }}
       >
-        {children}
+        <App>{children}</App>
       </ConfigProvider>
     </SessionProvider>
   );
 }
-

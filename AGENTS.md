@@ -57,11 +57,25 @@
 - 业务页面放在 `src/app/(app)` 下，并由 `src/middleware.ts` 统一保护。
 - `/login` 必须可访问且不被 middleware 拦截。
 - 任何新增“管理功能”默认需要登录（除非用户明确说公开页面）。
+- 页面权限（按用户配置）：
+  - 权限清单：`src/lib/page-permissions.ts`
+  - 服务端强制校验：页面入口使用 `requirePageAccess("<pageKey>")`（见 `src/lib/require-page.ts`）
+  - 菜单显示：由 `/api/me/pages` 返回的 `keys` 决定（见 `src/app/(app)/layout.tsx`）
+  - API 保护：业务接口用 `canAccessPage(session.user.id, session.user.roles, "<pageKey>")` 返回 `403`
 
 ## UI/后台交互规则
 - 列表页：优先 AntD `Table` + 服务器分页（通过 REST 参数 `page/pageSize/q`）
 - 表单：优先 AntD `Form`，弹窗编辑用 `Modal`
-- 统一反馈：成功/失败用 `message.success/error`
+- 用户-角色：一个用户只能设置一个角色
+  - API 入参：使用 `roleId`（不要用 `roleIds` 数组）
+  - UI：使用 `Select` 单选（建议 `allowClear` 支持移除角色）
+- 角色描述：使用下拉可选值（可清空）
+  - 可选：`用户` / `管理员`
+- 统一反馈与弹窗（避免 antd context 警告）：
+  - 禁止使用静态方法：`import { message } from "antd"` / `message.success(...)`
+  - 禁止使用静态确认框：`Modal.confirm(...)`
+  - 统一使用 `App` 上下文：`const { message, modal } = App.useApp()`，然后 `message.success/error(...)`、`modal.confirm(...)`
+  - 全局必须包裹 AntD `<App>`（当前在 `src/app/providers.tsx` 内已实现）
 
 ## Docker/部署规则
 - 保持 `docker-compose.yml` 可直接启动（`web + db + nginx`）。
@@ -74,4 +88,3 @@
 - `pnpm build` 通过
 - 新功能有可访问的入口（菜单/按钮/路由），并符合现有 UI 风格
 - 若新增环境变量或启动步骤，更新 `README.md`
-

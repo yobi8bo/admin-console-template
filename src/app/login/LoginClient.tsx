@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, Form, Input, Typography, message } from "antd";
+import { App, Button, Card, Form, Input, Typography } from "antd";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -14,6 +14,7 @@ export default function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [submitting, setSubmitting] = useState(false);
+  const { message } = App.useApp();
 
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
@@ -27,7 +28,7 @@ export default function LoginClient() {
         padding: 16,
       }}
     >
-      <Card style={{ width: 420 }} bordered>
+      <Card style={{ width: 420 }} variant="outlined">
         <Typography.Title level={3} style={{ marginTop: 0 }}>
           登录
         </Typography.Title>
@@ -90,4 +91,3 @@ export default function LoginClient() {
     </div>
   );
 }
-

@@ -9,6 +9,15 @@ const credentialsSchema = z.object({
   password: z.string().min(1),
 });
 
+async function getRoleNamesForUser(userId: string) {
+  const rows = await prisma.userRole.findMany({
+    where: { userId },
+    select: { role: { select: { name: true } } },
+    take: 1,
+  });
+  return rows.map((r) => r.role.name);
+}
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   providers: [
@@ -39,14 +48,15 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     jwt: async ({ token, user }) => {
       if (user?.id) token.userId = user.id;
+      if (token.userId) token.roles = await getRoleNamesForUser(String(token.userId));
       return token;
     },
     session: async ({ session, token }) => {
       if (session.user && token.userId) {
         session.user.id = String(token.userId);
+        session.user.roles = token.roles ?? [];
       }
       return session;
     },
   },
 };
-

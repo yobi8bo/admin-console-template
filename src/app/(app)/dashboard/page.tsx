@@ -35,7 +35,7 @@ export default function DashboardPage() {
       </Typography.Title>
       <Row gutter={16}>
         <Col xs={24} sm={12} md={8}>
-          <Card bordered>
+          <Card variant="outlined">
             <Statistic
               title="用户总数"
               value={stats?.usersTotal ?? 0}
@@ -47,4 +47,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

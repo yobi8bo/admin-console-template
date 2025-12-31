@@ -5,7 +5,7 @@
 ## 本地开发
 
 1. 准备环境变量：复制 `.env.example` 为 `.env` 并按需修改
-2. 启动数据库（推荐）：`docker compose up -d db`
+2. 启动数据库（推荐）：`docker compose up -d db`（映射到本机 `5433`）
 3. 同步表结构并创建管理员：
    - `pnpm db:push`
    - `pnpm db:seed`

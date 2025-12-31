@@ -1,6 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/password";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { canAccessPage } from "@/lib/page-access";
 import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
@@ -13,11 +12,11 @@ const listQuerySchema = z.object({
   q: z.string().optional().default(""),
 });
 
-const createUserSchema = z.object({
-  email: z.string().email(),
-  name: z.string().trim().min(1).optional(),
-  password: z.string().min(6),
-  roleId: z.string().min(1).optional(),
+const createRoleSchema = z.object({
+  name: z.string().trim().min(1),
+  description: z
+    .enum(["用户", "管理员"])
+    .optional(),
 });
 
 function isUniqueConstraintError(error: unknown) {
@@ -32,7 +31,7 @@ export async function GET(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!(await canAccessPage(session.user.id, session.user.roles, "users"))) {
+  if (!(await canAccessPage(session.user.id, session.user.roles, "roles"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -50,41 +49,26 @@ export async function GET(request: Request) {
   const where = q
     ? {
         OR: [
-          { email: { contains: q, mode: "insensitive" as const } },
           { name: { contains: q, mode: "insensitive" as const } },
+          { description: { contains: q, mode: "insensitive" as const } },
         ],
       }
     : {};
 
   const [total, items] = await Promise.all([
-    prisma.user.count({ where }),
-    prisma.user.findMany({
+    prisma.role.count({ where }),
+    prisma.role.findMany({
       where,
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        roles: {
-          select: { role: { select: { id: true, name: true } } },
-          take: 1,
-        },
-      },
+      select: { id: true, name: true, description: true, createdAt: true },
     }),
   ]);
 
   return NextResponse.json({
     data: {
-      items: items.map((u) => ({
-        id: u.id,
-        email: u.email,
-        name: u.name,
-        createdAt: u.createdAt.toISOString(),
-        role: u.roles[0]?.role ?? null,
-      })),
+      items: items.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
       total,
       page,
       pageSize,
@@ -97,12 +81,12 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!(await canAccessPage(session.user.id, session.user.roles, "users"))) {
+  if (!(await canAccessPage(session.user.id, session.user.roles, "roles"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const json = await request.json().catch(() => null);
-  const parsed = createUserSchema.safeParse(json);
+  const parsed = createRoleSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Bad Request", issues: parsed.error.issues },
@@ -111,39 +95,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    const created = await prisma.user.create({
-      data: {
-        email: parsed.data.email,
-        name: parsed.data.name,
-        passwordHash: await hashPassword(parsed.data.password),
-        roles: parsed.data.roleId ? { create: { roleId: parsed.data.roleId } } : undefined,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        roles: {
-          select: { role: { select: { id: true, name: true } } },
-          take: 1,
-        },
-      },
+    const created = await prisma.role.create({
+      data: { name: parsed.data.name, description: parsed.data.description },
+      select: { id: true, name: true, description: true, createdAt: true },
     });
     return NextResponse.json(
-      {
-        data: {
-          id: created.id,
-          email: created.email,
-          name: created.name,
-          createdAt: created.createdAt.toISOString(),
-          role: created.roles[0]?.role ?? null,
-        },
-      },
+      { data: { ...created, createdAt: created.createdAt.toISOString() } },
       { status: 201 }
     );
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      return NextResponse.json({ error: "Email already exists" }, { status: 409 });
+      return NextResponse.json({ error: "Role name already exists" }, { status: 409 });
     }
     throw error;
   }
