@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 1. 忽略 .windsurf 目录下的所有内容
+.windsurf/*
+
+# 2. 例外：不忽略 rules 文件（或目录）
+!.windsurf/rules
